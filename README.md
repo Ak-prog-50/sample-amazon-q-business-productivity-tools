@@ -231,7 +231,7 @@ You have two options for deploying and running the application:
    cd infra
    npm install
    npm run build
-   npx cdk deploy QBusinessToolsCreateIamIdcApp --parameters ProjectId=SampleQVirginia
+   npx cdk deploy QBusinessToolsCreateIamIdcApp
    npx cdk deploy QBusinessToolsBackend --parameters ProjectId=SampleQVirginia
    npx cdk deploy QBusinessToolsFrontend --parameters ProjectId=SampleQVirginia
    npx cdk deploy QBusinessToolsCognitoStack
