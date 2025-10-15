@@ -14,8 +14,8 @@ usage() {
   echo ""
   echo "Options:"
   echo "  -u, --url         API base URL to use in the deployment (optional, will use CloudFront distribution URL if not provided)"
-  echo "  -s, --stack       CloudFront stack name (default: CloudfronStack)"
-  echo "  -c, --cognito     Cognito stack name (default: CognitoStack)"
+  echo "  -s, --stack       CloudFront stack name (default: QBusinessToolsFrontend)"
+  echo "  -c, --cognito     Cognito stack name (default: QBusinessToolsCognitoStack)"
   echo "  -r, --region      AWS region (default: us-east-1)"
   echo "  -h, --help        Display this help message"
   echo ""
@@ -25,8 +25,8 @@ usage() {
 }
 
 # Default values
-STACK_NAME="CloudfronStack"
-COGNITO_STACK_NAME="CognitoStack"
+STACK_NAME="QBusinessToolsFrontend"
+COGNITO_STACK_NAME="QBusinessToolsCognitoStack"
 REGION="us-east-1"
 API_BASE_URL=""
 
@@ -84,10 +84,12 @@ fi
 # Project root directory (one level up from cdk-deployment)
 PROJECT_ROOT="../frontend"
 API_CONSTANTS_FILE="$PROJECT_ROOT/src/constants/apiConstants.ts"
+COGNITO_CONFIG_FILE="$PROJECT_ROOT/src/constants/cognitoConfig.ts"
 
 echo "=== QBusiness Tools Deployment ==="
 echo "API Base URL: $API_BASE_URL"
 echo "CloudFront Stack: $STACK_NAME"
+echo "Cognito Stack: $COGNITO_STACK_NAME"
 echo "AWS Region: $REGION"
 echo "Project Root: $PROJECT_ROOT"
 echo ""
@@ -109,20 +111,52 @@ rm -f "${API_CONSTANTS_FILE}.tmp"
 echo "Updated API_BASE_URL to: $API_BASE_URL"
 echo ""
 
-# Step 2: Build the React app
-echo "Step 2: Building React app..."
+# Step 2: Update Cognito configuration
+echo "Step 2: Updating Cognito configuration..."
+if [ ! -f "$COGNITO_CONFIG_FILE" ]; then
+  echo "Error: Cognito config file not found at $COGNITO_CONFIG_FILE"
+  exit 1
+fi
+
+# Get Cognito outputs
+echo "Fetching Cognito configuration from stack: $COGNITO_STACK_NAME..."
+USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name "$COGNITO_STACK_NAME" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+CLIENT_ID=$(aws cloudformation describe-stacks --stack-name "$COGNITO_STACK_NAME" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='UserPoolClientId'].OutputValue" --output text)
+DOMAIN_PREFIX=$(aws cloudformation describe-stacks --stack-name "$COGNITO_STACK_NAME" --region "$REGION" --query "Stacks[0].Outputs[?OutputKey=='UserPoolDomainPrefix'].OutputValue" --output text)
+
+if [ -z "$USER_POOL_ID" ] || [ -z "$CLIENT_ID" ] || [ -z "$DOMAIN_PREFIX" ]; then
+  echo "Error: Failed to get Cognito details from CloudFormation stack '$COGNITO_STACK_NAME'."
+  exit 1
+fi
+
+# Create a backup of the original file
+cp "$COGNITO_CONFIG_FILE" "${COGNITO_CONFIG_FILE}.bak"
+
+# Replace the Cognito values
+sed -i.tmp "s|REGION: '.*'|REGION: '$REGION'|" "$COGNITO_CONFIG_FILE"
+sed -i.tmp "s|USER_POOL_ID: '.*'|USER_POOL_ID: '$USER_POOL_ID'|" "$COGNITO_CONFIG_FILE"
+sed -i.tmp "s|CLIENT_ID: '.*'|CLIENT_ID: '$CLIENT_ID'|" "$COGNITO_CONFIG_FILE"
+sed -i.tmp "s|DOMAIN_PREFIX: '.*'|DOMAIN_PREFIX: '$DOMAIN_PREFIX'|" "$COGNITO_CONFIG_FILE"
+rm -f "${COGNITO_CONFIG_FILE}.tmp"
+
+echo "Cognito configuration updated successfully."
+echo ""
+
+# Step 3: Build the React app
+echo "Step 3: Building React app..."
 cd "$PROJECT_ROOT"
 npm run build
 if [ $? -ne 0 ]; then
   echo "Error: Failed to build React app"
-  # Restore the original apiConstants.ts file
+  # Restore the original files
   mv "${API_CONSTANTS_FILE}.bak" "$API_CONSTANTS_FILE"
+  mv "${COGNITO_CONFIG_FILE}.bak" "$COGNITO_CONFIG_FILE"
   exit 1
 fi
 echo "React app built successfully"
 echo ""
 
-# Step 3: Get S3 bucket name from CloudFormation stack
+# Step 4: Get S3 bucket name from CloudFormation stack
 echo "Step 4: Getting S3 bucket name from CloudFormation stack..."
 S3_BUCKET=$(aws cloudformation describe-stacks \
   --stack-name "$STACK_NAME" \
@@ -138,8 +172,8 @@ fi
 echo "S3 bucket name: $S3_BUCKET"
 echo ""
 
-# Step 4: Deploy to S3
-echo "Step 4: Deploying to S3 bucket..."
+# Step 5: Deploy to S3
+echo "Step 5: Deploying to S3 bucket..."
 aws s3 sync "$PROJECT_ROOT/build" "s3://$S3_BUCKET" --delete --region "$REGION"
 if [ $? -ne 0 ]; then
   echo "Error: Failed to deploy to S3 bucket"
