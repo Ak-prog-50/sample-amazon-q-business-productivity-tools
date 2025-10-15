@@ -161,6 +161,8 @@ export class BackendStack extends cdk.Stack {
             directory: path.join(__dirname, "../../backend/typescript"),
             file: "./Dockerfile",
             platform: ecrAssets.Platform.LINUX_ARM64,
+            ignoreMode: cdk.IgnoreMode.DOCKER,
+            exclude: ["node_modules", "dist", ".env", ".DS_Store"],
         });
 
         const qbusinessChatRole = this.createQBusinessChatRole(projectId.valueAsString, fargateTaskRole)

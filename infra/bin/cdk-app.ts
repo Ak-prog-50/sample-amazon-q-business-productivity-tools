@@ -42,6 +42,6 @@ const identityCenterStack = new UpdateIamIdcApp(app, 'QBusinessToolsUpdateIamIdc
 });
 
 // Add dependencies to ensure CloudFront and Cognito stacks are deployed before IAM Identity Center stack
-backendStack.addDependency(iamIdcApp);
+backendStack.addDependency(iamIdcApp); // tjis explicit dependency is already implicitly handled by the Fn.importValue("QBusinessToolsIamIdcAppArn") call within the BackendStack
 identityCenterStack.addDependency(frontendStack);
 identityCenterStack.addDependency(cognitoStack);
