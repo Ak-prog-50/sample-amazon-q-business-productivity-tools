@@ -13,13 +13,13 @@ export const COGNITO_CONFIG = {
   REGION: 'us-east-1',
 
   // Cognito User Pool ID
-  USER_POOL_ID: '',
+  USER_POOL_ID: 'us-east-1_TnjCfeuYL',
 
   // Cognito App Client ID (without secret)
-  CLIENT_ID: '',
+  CLIENT_ID: 'bfg1etqv4lgj40d1pc8dcf4s9',
 
   // Cognito domain prefix for hosted UI
-  DOMAIN_PREFIX: '',
+  DOMAIN_PREFIX: 'qbusiness-55509661',
 
   // OAuth scopes to request
   OAUTH_SCOPES: ['openid', 'email', 'profile'],
