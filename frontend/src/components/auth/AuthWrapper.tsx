@@ -1,21 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { Hub } from 'aws-amplify/utils';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 
-import { COGNITO_CONFIG } from '../../constants/cognitoConfig';
-import { AuthService, AuthProvider } from '../../services/AuthService';
-import { cognitoConfigProxyService } from '../../services/proxy/CognitoConfigProxyService';
-import { credentialExchangeProxyService } from '../../services/proxy/CredentialExchangeProxyService';
-import {
-  storeIdToken,
-  getIdToken,
-  isTokenExpired,
-  parseJwt,
-  storeUserData,
-  storeAccessToken,
-} from '../../utils/tokenUtils';
+import { AuthService, AuthUser } from '../../services/AuthService';
 
 interface AuthWrapperProps {
   children: React.ReactNode;
@@ -25,280 +13,31 @@ const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Configure Cognito with our settings
-  const configureCognito = async () => {
-    try {
-      // Fetch Cognito configuration from the backend
-      const configFromBackend = await cognitoConfigProxyService.fetchCognitoConfig();
-
-      // Create the config object using the values from the backend
-      const cognitoConfig = {
-        userPoolId: configFromBackend.userPoolId,
-        clientId: configFromBackend.clientId,
-        region: configFromBackend.region,
-        domainPrefix: configFromBackend.domainPrefix,
-      };
-
-      // Set auth provider to Cognito - we only use Cognito authentication
-      AuthService.setAuthProvider(AuthProvider.COGNITO);
-      AuthService.configureCognito(cognitoConfig);
-    } catch (error) {
-      console.error(
-        'Failed to fetch Cognito config from backend, falling back to static config:',
-        error,
-      );
-    }
-  };
-
-  // Handle successful authentication
-  const handleSuccessfulAuth = useCallback(async () => {
-    try {
-      console.log('Handling successful authentication');
-
-      // Check if we already have a valid session
-      if (AuthService.hasValidCognitoSession()) {
-        console.log('Valid session already exists, skipping authentication processing');
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // Set authenticated state to true early to ensure UI updates
-      setIsAuthenticated(true);
-
-      try {
-        // Process authentication with AuthService
-        const idToken = await AuthService.processAuthenticationSuccess();
-        console.log('Authentication processing completed successfully');
-
-        // Store the ID token in local storage using our utility
-        if (idToken) {
-          storeIdToken(idToken);
-
-          // Extract and store user data
-          const userData = parseJwt(idToken);
-          if (userData) {
-            storeUserData(userData);
-            console.log('User data stored from token');
-          }
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Check if this is a redirect from the OAuth provider
+      if (window.location.search.includes('code=') && window.location.search.includes('state=')) {
+        const user = await AuthService.handleRedirect();
+        if (user) {
+          setIsAuthenticated(true);
         }
-      } catch (authError) {
-        console.error('Error in authentication processing, but continuing:', authError);
-        // We already set isAuthenticated to true, so we'll continue
+      } else {
+        // Otherwise, check for an existing session
+        const user = AuthService.getCurrentUser();
+        if (user) {
+          setIsAuthenticated(true);
+        }
       }
-
       setIsLoading(false);
-    } catch (error) {
-      console.error('Error processing authentication:', error);
+    };
 
-      // Check if we have a token anyway and force authentication
-      const storedToken = getIdToken();
-      if (storedToken) {
-        console.log('Found stored token despite error, forcing authentication');
-        setIsAuthenticated(true);
-      }
-
-      setIsLoading(false);
-    }
+    checkAuth();
   }, []);
 
-  // Register auth event listener
-  const registerAuthListener = useCallback(() => {
-    return Hub.listen('auth', ({ payload }) => {
-      switch (payload.event) {
-        case 'signInWithRedirect':
-          console.log('Redirecting to Cognito login...');
-          break;
-        case 'signInWithRedirect_failure':
-          console.error('Error signing in:', payload.data);
-          setIsLoading(false);
-          break;
-        case 'customOAuthState':
-          console.log('Custom OAuth state received');
-          break;
-        case 'signedIn':
-          console.log('Successfully signed in');
-          handleSuccessfulAuth();
-          break;
-        case 'signedOut':
-          console.log('User signed out');
-          setIsAuthenticated(false);
-          break;
-      }
-    });
-  }, [handleSuccessfulAuth]);
-
-  // Check if we have tokens in the URL (after redirect from Cognito Hosted UI)
-  const checkTokensFromUrl = async () => {
-    try {
-      console.log('Checking for tokens in URL...');
-      console.log('Current URL:', window.location.href);
-
-      const tokens = AuthService.extractTokensFromUrl();
-      console.log('Extracted tokens:', tokens);
-
-      if (tokens.idToken) {
-        console.log('Found ID token in URL');
-
-        // Store the tokens in local storage
-        storeIdToken(tokens.idToken);
-        if (tokens.accessToken) {
-          storeAccessToken(tokens.accessToken);
-        }
-
-        // Extract user information from the ID token
-        const userData = parseJwt(tokens.idToken);
-        if (userData) {
-          storeUserData(userData);
-          console.log('User data extracted from token:', userData);
-        }
-
-        console.log('Stored user data');
-
-        // IMPORTANT: Force authentication state to true and loading to false
-        // regardless of what happens next
-        setIsAuthenticated(true);
-        setIsLoading(false);
-
-        console.log('Set authenticated=true and loading=false');
-
-        // DIRECT CALL to credential exchange service to ensure it's being called
-        try {
-          console.log('Making direct call to credentialExchangeProxyService.exchangeCredentials');
-          const exchangeResult = await credentialExchangeProxyService.exchangeCredentials({
-            idToken: tokens.idToken,
-          });
-          console.log('Direct credential exchange result:', exchangeResult);
-
-          if (exchangeResult.success && exchangeResult.data) {
-            console.log(
-              'Successfully exchanged ID token for session ID:',
-              exchangeResult.data.sessionId,
-            );
-            localStorage.setItem('cognito-session-id', exchangeResult.data.sessionId);
-          } else {
-            console.error('Failed to exchange ID token for session ID:', exchangeResult.error);
-          }
-        } catch (exchangeError) {
-          console.error('Error in direct credential exchange call:', exchangeError);
-        }
-
-        // Process authentication with AuthService
-        try {
-          await AuthService.processAuthenticationSuccess(tokens.idToken);
-          console.log('Authentication processing completed successfully');
-        } catch (authError) {
-          console.error('Error during authentication processing:', authError);
-          // Continue anyway since we have the ID token
-          console.log('Continuing despite authentication processing error');
-        }
-
-        // Clear the URL hash to remove the tokens
-        window.history.replaceState({}, document.title, window.location.pathname);
-        console.log('Cleared URL hash');
-      } else {
-        console.log('No ID token found in URL');
-      }
-    } catch (error) {
-      console.error('Error processing tokens from URL:', error);
-      // Force authentication if we have a token in localStorage
-      const storedToken = getIdToken();
-      if (storedToken) {
-        console.log('Found stored token, forcing authentication');
-        setIsAuthenticated(true);
-      }
-      setIsLoading(false);
-    }
+  const login = () => {
+    setIsLoading(true);
+    AuthService.signInWithRedirect();
   };
-
-  // Check if we already have a valid ID token or session
-  const checkExistingAuth = async () => {
-    console.log('Checking for existing authentication...');
-
-    // First check if we have a valid session
-    if (AuthService.hasValidCognitoSession()) {
-      console.log('Found existing valid session');
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // If no valid session, check for ID token
-    let idToken = AuthService.getIdToken();
-    console.log('AuthService.getIdToken() returned:', idToken ? 'token found' : 'no token');
-
-    // If not found, try to get from our token utils (local storage)
-    if (!idToken) {
-      const storedToken = getIdToken();
-      if (storedToken) {
-        idToken = storedToken;
-        console.log('Found token in local storage');
-      }
-    }
-
-    if (idToken) {
-      console.log('Found existing ID token');
-
-      // Check if the token is expired
-      const expired = isTokenExpired(idToken);
-      console.log('Token expired?', expired);
-
-      if (!expired) {
-        console.log('Token is still valid, proceeding with authentication');
-
-        try {
-          // Try to exchange the ID token for a session ID, but continue even if it fails
-          await AuthService.exchangeTokenForSessionIfNeeded(idToken);
-        } catch (error) {
-          console.error('Error exchanging token, but continuing anyway:', error);
-        }
-
-        // Set authenticated regardless of exchange result
-        setIsAuthenticated(true);
-      } else {
-        console.log('ID token is expired, user needs to login again');
-      }
-    } else {
-      console.log('No existing ID token found');
-    }
-
-    setIsLoading(false);
-  };
-
-  // Initiate login with Cognito Hosted UI
-  const login = async () => {
-    try {
-      setIsLoading(true);
-      await AuthService.signInWithCognitoHostedUI();
-      // The rest will be handled by the Hub listener
-    } catch (error) {
-      console.error('Error initiating login:', error);
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Configure Cognito with our settings (async)
-    const initAuth = async () => {
-      await configureCognito();
-
-      // Check if we have tokens in the URL (after redirect from Cognito Hosted UI)
-      await checkTokensFromUrl();
-
-      // Check if we already have a valid ID token or session
-      await checkExistingAuth();
-    };
-
-    initAuth();
-
-    // Listen for auth events
-    const hubListener = registerAuthListener();
-
-    return () => {
-      // Clean up the listener when component unmounts
-      hubListener();
-    };
-  }, [registerAuthListener]);
 
   if (isLoading) {
     return (

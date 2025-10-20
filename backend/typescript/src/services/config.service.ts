@@ -44,6 +44,7 @@ export class ConfigService {
     );
   }
 
+  // * Not used now
   /**
    * Get Cognito configuration from AWS Secrets Manager
    * @param sessionId Optional session ID to fetch credentials from DynamoDB

@@ -6,7 +6,7 @@ import { Hub } from 'aws-amplify/utils';
 import { AlertCircle, ExternalLink, RefreshCw, Save, Shield, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
-import { AuthService, CognitoConfig } from '../../services/AuthService';
+import { AuthService, CognitoConfig } from '../../services/AuthService-OLD';
 import { cognitoConfigProxyService } from '../../services/proxy/CognitoConfigProxyService';
 import { credentialExchangeProxyService } from '../../services/proxy/CredentialExchangeProxyService';
 

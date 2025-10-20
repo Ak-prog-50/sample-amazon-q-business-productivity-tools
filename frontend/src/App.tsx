@@ -13,7 +13,8 @@ import ToolsLandingPage from './components/ToolsLandingPage';
 import ChatBot from './components/unified-search/ChatBot';
 import GroundTruthEvaluation from './components/unified-search/GroundTruthEvaluation';
 import UnifiedSearch from './components/unified-search/UnifiedSearch';
-import { COGNITO_CONFIG } from './constants/cognitoConfig';
+// import { COGNITO_CONFIG } from './constants/cognitoConfig';
+import { OAUTH_CONFIG } from './constants/oauthConfig';
 import { AuthService, AuthProvider } from './services/AuthService';
 import { Config } from './types/types';
 
@@ -45,8 +46,10 @@ function App() {
       }
     }
 
-    // Set auth provider to Cognito - we only use Cognito authentication
-    AuthService.setAuthProvider(AuthProvider.COGNITO);
+    // // Set auth provider to Cognito - we only use Cognito authentication
+    // AuthService.setAuthProvider(AuthProvider.COGNITO);
+
+    // The auth provider is implicitly OAuth, so no need to set it.
   }, []);
 
   const handleSelectTool = (tool: string) => {
@@ -81,17 +84,22 @@ function App() {
     setView('tools-landing');
   };
 
-  // Configure Cognito on component mount
-  useEffect(() => {
-    // Configure Cognito with our settings from constants file
-    const cognitoConfig = {
-      userPoolId: COGNITO_CONFIG.USER_POOL_ID,
-      clientId: COGNITO_CONFIG.CLIENT_ID,
-      region: COGNITO_CONFIG.REGION,
-      domainPrefix: COGNITO_CONFIG.DOMAIN_PREFIX,
-    };
+  // // Configure Cognito on component mount
+  // useEffect(() => {
+  //   // Configure Cognito with our settings from constants file
+  //   const cognitoConfig = {
+  //     userPoolId: COGNITO_CONFIG.USER_POOL_ID,
+  //     clientId: COGNITO_CONFIG.CLIENT_ID,
+  //     region: COGNITO_CONFIG.REGION,
+  //     domainPrefix: COGNITO_CONFIG.DOMAIN_PREFIX,
+  //   };
 
-    AuthService.configureCognito(cognitoConfig);
+  //   AuthService.configureCognito(cognitoConfig);
+  // }, []);
+
+  // Handle OAuth redirect on component mount
+  useEffect(() => {
+    AuthService.handleRedirect();
   }, []);
 
   return (

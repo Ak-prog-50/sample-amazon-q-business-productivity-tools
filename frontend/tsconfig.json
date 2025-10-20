@@ -23,4 +23,8 @@
   "include": [
     "src"
   ]
+  ,"exclude": [
+    "src/components/auth/AuthWrapper-OLD.tsx",
+    "src/services/AuthService-OLD.ts"
+  ]
 }

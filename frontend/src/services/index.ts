@@ -12,7 +12,8 @@ export type {
 
 // Auth Service
 export { AuthService } from './AuthService';
-export type { AuthUser, AuthConfig } from './AuthService';
+// export type { AuthUser, AuthConfig } from './AuthService';
+export type { AuthUser } from './AuthService';
 
 export type {} from // Re-export types from KendraService
 './KendraService';

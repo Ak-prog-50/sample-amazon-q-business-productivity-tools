@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { STORAGE_KEYS } from '../constants/cognitoConfig';
+import { STORAGE_KEYS } from '../constants/oauthConfig';
 
 /**
  * Token utilities for managing authentication tokens
@@ -11,11 +11,12 @@ import { STORAGE_KEYS } from '../constants/cognitoConfig';
  * Store the ID token in local storage
  * @param idToken The ID token to store
  */
-export const storeIdToken = (idToken: string): void => {
+export const storeIdToken = (idToken: string, accessToken: string): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.ID_TOKEN, idToken);
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
   } catch (error) {
-    console.error('Failed to store ID token:', error);
+    console.error('Failed to store tokens:', error);
   }
 };
 

@@ -1,3 +1,4 @@
+// * This file is not used now. oauthConfig.ts is used instead.
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 

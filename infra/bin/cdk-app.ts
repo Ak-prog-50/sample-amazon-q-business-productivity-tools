@@ -24,6 +24,7 @@ const backendStack = new BackendStack(app, 'QBusinessToolsBackend', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region:  process.env.CDK_DEFAULT_REGION },
 });
 
+// * Not needed now
 // Create the Cognito stack
 const cognitoStack = new CognitoStack(app, 'QBusinessToolsCognitoStack', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
