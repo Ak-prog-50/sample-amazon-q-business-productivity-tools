@@ -10,10 +10,10 @@
 export const OAUTH_CONFIG = {
   // Your third-party OAuth provider's details
   // Replace these with your actual configuration
-  CLIENT_ID: 'YOUR_THIRD_PARTY_CLIENT_ID',
-  AUTHORIZATION_URL: 'https://your-oauth-server.com/auth',
-  TOKEN_URL: 'https://your-oauth-server.com/token',
-  LOGOUT_URL: 'https://your-oauth-server.com/logout',
+  CLIENT_ID: 'nYNeoqlfd4knr9kvyeixdB57SwfZHvUXy4XV5l6ZSJA',
+  AUTHORIZATION_URL: 'https://my.staging.smata.com/oauth/authorize',
+  TOKEN_URL: 'https://my.staging.smata.com/oauth/token',
+  LOGOUT_URL: 'https://my.staging.smata.com/oauth/logout',
 
   // OAuth scopes to request
   OAUTH_SCOPES: ['openid', 'email', 'profile'],

@@ -11,6 +11,6 @@
  * Base URL for backend API services
  */
 // For production
-// export const API_BASE_URL = 'https://d2zebvibp9fnao.cloudfront.net';
+// export const API_BASE_URL = 'http://localhost:3001';
 // For local development
 export const API_BASE_URL = 'https://d2zebvibp9fnao.cloudfront.net';
