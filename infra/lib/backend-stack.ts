@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT-0
 
 import * as cdk from "aws-cdk-lib";
-import {Construct} from "constructs";
+import { Construct } from "constructs";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecs from "aws-cdk-lib/aws-ecs";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -13,9 +13,9 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
-import {Duration, Fn, StackProps} from "aws-cdk-lib";
-import {Role} from "aws-cdk-lib/aws-iam";
-import {Table} from "aws-cdk-lib/aws-dynamodb";
+import { Duration, Fn, StackProps } from "aws-cdk-lib";
+import { Role } from "aws-cdk-lib/aws-iam";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 
 export interface BackendStackProps extends StackProps {
 }
@@ -101,12 +101,12 @@ export class BackendStack extends cdk.Stack {
         // Keep only gateway endpoints, removing all interface endpoints
         vpc.addGatewayEndpoint("S3Endpoint", {
             service: ec2.GatewayVpcEndpointAwsService.S3,
-            subnets: [{subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS}],
+            subnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }],
         });
 
         vpc.addGatewayEndpoint("DynamoDBEndpoint", {
             service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
-            subnets: [{subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS}],
+            subnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }],
         });
 
         const qbusinessQueryEvalRole = this.createBedrockQueryEvalRole(projectId.valueAsString)
@@ -215,7 +215,7 @@ export class BackendStack extends cdk.Stack {
             taskDefinition,
             desiredCount: serviceDesiredCount.valueAsNumber,
             assignPublicIp: false,
-            vpcSubnets: {subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS},
+            vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
             circuitBreaker: {
                 rollback: true,
             },
@@ -331,7 +331,7 @@ export class BackendStack extends cdk.Stack {
         });
     }
 
-    createBedrockQueryEvalRole(projectId: string){
+    createBedrockQueryEvalRole(projectId: string) {
         const qbusinessQueryEvalRole = new iam.Role(this, "QBusinessQueryEvalRole", {
             assumedBy: new iam.ServicePrincipal("bedrock.amazonaws.com"),
             roleName: `${projectId}-qbusiness-query-eval`,
@@ -349,7 +349,7 @@ export class BackendStack extends cdk.Stack {
         return qbusinessQueryEvalRole
     }
 
-    createFargateTaskRole(projectId: string, qbusinessQueryEvalRole: Role, userSessionTable: Table){
+    createFargateTaskRole(projectId: string, qbusinessQueryEvalRole: Role, userSessionTable: Table) {
         const taskRole = new iam.Role(this, "BackendStackTaskRole", {
             assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
             roleName: `${projectId}-task-role`,
@@ -394,11 +394,21 @@ export class BackendStack extends cdk.Stack {
                 actions: [
                     "dynamodb:PutItem",
                     "dynamodb:GetItem",
-                    "dynamodb:ListTables",
                 ],
                 resources: [userSessionTable.tableArn],
             })
         );
+
+        taskRole.addToPolicy(
+            new iam.PolicyStatement({
+                actions: [
+                    "dynamodb:ListTables",
+
+                ],
+                resources: ["*"],
+            })
+        );
+
 
         taskRole.addToPolicy(
             new iam.PolicyStatement({
@@ -435,7 +445,7 @@ export class BackendStack extends cdk.Stack {
         return taskRole
     }
 
-    createQBusinessChatRole(projectId: string, fargateTaskRole: Role){
+    createQBusinessChatRole(projectId: string, fargateTaskRole: Role) {
         const qbusinessChatRole = new iam.Role(this, "QBusinessChatRole", {
             assumedBy: new iam.CompositePrincipal(
                 new iam.ServicePrincipal('qbusiness.amazonaws.com')
@@ -472,7 +482,7 @@ export class BackendStack extends cdk.Stack {
         return qbusinessChatRole;
     }
 
-    createQBusinessAnonymousAccessRole(projectId: string ){
+    createQBusinessAnonymousAccessRole(projectId: string) {
         const qbusinessAnonymousAccessRole = new iam.Role(this, "QBusinessAnonymousAccessRole", {
             assumedBy: new iam.CompositePrincipal(
                 new iam.ServicePrincipal('qbusiness.amazonaws.com'),
@@ -499,7 +509,7 @@ export class BackendStack extends cdk.Stack {
 
     }
 
-    createUserSessionTable(){
+    createUserSessionTable() {
         return new dynamodb.Table(this, 'UserSessionTable', {
             tableName: 'UserSession',
             partitionKey: {
